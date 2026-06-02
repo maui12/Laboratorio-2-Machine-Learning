@@ -1,0 +1,4 @@
+name: lab2ml
+dependencies:
+  - python = 3.13.7
+  - pandas
