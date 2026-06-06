@@ -49,18 +49,27 @@ def main():
     print("--- FASE 2: MODELADO Y EVALUACIÓN ---")
     # --- ENTRENAMIENTO DE GÉNERO ---
     print("\nEntrenando pipeline de clasificación de género (PCA + GaussianNB)...")
-    n_components_gender = 100 # n componentes fijo
+    pca_components_gender_to_try = [15, 25, 35, 50] 
     
     gender_model = train_gender_classifier(
         X_train, 
         y_gender_train, 
-        n_components_gender, 
+        pca_components_gender_to_try, 
         config.random_state
     )
     
     print("\nEvaluando modelo de género...")
     gender_metrics = evaluate_gender_classifier(gender_model, X_test, y_gender_test)
-    print(f"- Exactitud (Accuracy): {gender_metrics['accuracy']:.4f}")
+    print("      Exactitud (Accuracy):  {:.4f}".format(gender_metrics['accuracy']))
+    print("      Precisión (Precision): {:.4f}".format(gender_metrics['precision']))
+    print("      Exhaustividad (Recall):{:.4f}".format(gender_metrics['recall']))
+    print("      Puntaje F1 (F1-score): {:.4f}".format(gender_metrics['f1']))
+    print("      Matriz de Confusión:")
+    print("                 Pred: Mujer   Pred: Hombre")
+    print(f"      Real Mujer:   {gender_metrics['confusion_matrix'][0][0]:<12} {gender_metrics['confusion_matrix'][0][1]}")
+    print(f"      Real Hombre:  {gender_metrics['confusion_matrix'][1][0]:<12} {gender_metrics['confusion_matrix'][1][1]}")
+    
+    os.makedirs("artifacts/models", exist_ok=True)
     
     save_gender_classifier(gender_model, "artifacts/models/pipeline_genero.pkl")
     print("¡pipeline_genero.pkl guardado exitosamente!")
@@ -70,7 +79,7 @@ def main():
     print("Buscando los mejores hiperparámetros con GridSearchCV...")
 
     # El equipo define qué cantidades de componentes PCA probar
-    pca_components_to_try = (20, 30, 40) 
+    pca_components_to_try = (50, 100, 150) 
 
     # 1. Entrenar (Esto ejecutará GridSearchCV internamente)
     best_age_model = train_age_regressor(
@@ -86,10 +95,8 @@ def main():
 
     for metric, value in age_metrics.items():
         print(f"- {metric}: {value:.4f}")
-    # El MAE les dirá, en promedio, por cuántos años de diferencia se está equivocando el modelo.
 
     # 3. Guardar el artefacto para la app web
-    import os
     os.makedirs("artifacts/models", exist_ok=True)
     save_age_regressor(best_age_model, "artifacts/models/pipeline_edad.pkl")
     print("¡pipeline_edad.pkl guardado exitosamente!")

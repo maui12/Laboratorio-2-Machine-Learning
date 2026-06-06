@@ -7,6 +7,6 @@ class LabConfig:
     dataset_dir: Path = Path("dataset/UTKFace") 
     image_extensions: tuple[str, ...] = (".jpg", ".jpeg", ".png")
     image_size: tuple[int, int] = (25, 25)
-    max_images: int | None = 500 # cantidad de imagenes cargadas al inicio
+    max_images: int | None = None # cantidad de imagenes cargadas al inicio
     random_state: int = 42
     test_size: float = 0.2
