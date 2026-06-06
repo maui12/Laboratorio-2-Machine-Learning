@@ -1,5 +1,6 @@
-from _future_ import annotations
+from __future__ import annotations
 
+import os
 import numpy as np
 import joblib
 from dataclasses import dataclass
@@ -121,4 +122,5 @@ def save_age_regressor(model: Any, output_path: str) -> None:
     - Usar un nombre sugerido como pipeline_edad.pkl.
     """
     #completacion laboratorio
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     joblib.dump(model, output_path)

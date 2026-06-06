@@ -1,5 +1,11 @@
+import os
+import subprocess
+import sys
+from sklearn.model_selection import train_test_split
 from src.config import LabConfig
 from src.data import build_dataset, dataset_to_dataframe
+from src.gender_classification import train_gender_classifier, evaluate_gender_classifier, save_gender_classifier
+from src.regression import train_age_regressor, evaluate_age_regressor, save_age_regressor
 
 def main():
     print("--- FASE 1: PREPARACIÓN DE DATOS ---")
@@ -25,6 +31,76 @@ def main():
     
     print("\nDistribución de Género (0: Mujer, 1: Hombre):")
     print(df["gender"].value_counts())
+
+
+    print("\n--- SEPARACIÓN DE DATOS (TRAIN/TEST SPLIT) ---")
+    # Separamos X, el género y la edad simultáneamente en un 80% entrenamiento y 20% prueba
+    X_train, X_test, y_gender_train, y_gender_test, y_age_train, y_age_test = train_test_split(
+        dataset.X,
+        dataset.y_gender,
+        dataset.y_age,
+        test_size=config.test_size,
+        random_state=config.random_state
+    )
+    print(f"Datos de entrenamiento: {X_train.shape[0]} imágenes")
+    print(f"Datos de prueba: {X_test.shape[0]} imágenes")
+
+
+    print("--- FASE 2: MODELADO Y EVALUACIÓN ---")
+    # --- ENTRENAMIENTO DE GÉNERO ---
+    print("\nEntrenando pipeline de clasificación de género (PCA + GaussianNB)...")
+    n_components_gender = 100 # n componentes fijo
+    
+    gender_model = train_gender_classifier(
+        X_train, 
+        y_gender_train, 
+        n_components_gender, 
+        config.random_state
+    )
+    
+    print("\nEvaluando modelo de género...")
+    gender_metrics = evaluate_gender_classifier(gender_model, X_test, y_gender_test)
+    print(f"- Exactitud (Accuracy): {gender_metrics['accuracy']:.4f}")
+    
+    save_gender_classifier(gender_model, "artifacts/models/pipeline_genero.pkl")
+    print("¡pipeline_genero.pkl guardado exitosamente!")
+
+
+    print("\n--- ENTRENAMIENTO DE REGRESIÓN DE EDAD ---")
+    print("Buscando los mejores hiperparámetros con GridSearchCV...")
+
+    # El equipo define qué cantidades de componentes PCA probar
+    pca_components_to_try = (20, 30, 40) 
+
+    # 1. Entrenar (Esto ejecutará GridSearchCV internamente)
+    best_age_model = train_age_regressor(
+        X_train=X_train, 
+        y_age_train=y_age_train, 
+        pca_components=pca_components_to_try, 
+        random_state=config.random_state
+    )
+
+    # 2. Evaluar y mostrar métricas numéricas puras en consola
+    print("\nEvaluando el mejor modelo de edad...")
+    age_metrics = evaluate_age_regressor(best_age_model, X_test, y_age_test)
+
+    for metric, value in age_metrics.items():
+        print(f"- {metric}: {value:.4f}")
+    # El MAE les dirá, en promedio, por cuántos años de diferencia se está equivocando el modelo.
+
+    # 3. Guardar el artefacto para la app web
+    import os
+    os.makedirs("artifacts/models", exist_ok=True)
+    save_age_regressor(best_age_model, "artifacts/models/pipeline_edad.pkl")
+    print("¡pipeline_edad.pkl guardado exitosamente!")
+
+
+    print("\n--- FASE 3: DESPLIEGUE ---")
+    print("Iniciando la aplicación visual en tu navegador...")
+    print("Presiona Ctrl+C en esta consola para detener el servidor web cuando termines.\n")
+    
+    # Esto equivale a escribir "streamlit run src/streamlit_app.py" en la terminal
+    subprocess.run([sys.executable, "-m", "streamlit", "run", "src/streamlit_app.py"])
 
 if __name__ == "__main__":
     main()

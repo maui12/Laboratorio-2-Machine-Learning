@@ -1,4 +1,4 @@
-from _future_ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 import streamlit as st
@@ -6,7 +6,9 @@ import cv2
 import numpy as np
 import joblib
 
-#definir rutas de los modelos
+from src.inference import predict_face
+
+# definir rutas de los modelos
 suggested_gender_model = Path("artifacts/models/pipeline_genero.pkl")
 suggested_age_model = Path("artifacts/models/pipeline_edad.pkl")
 
@@ -29,17 +31,16 @@ def run_app() -> None:
     st.write(
         "Esta app detecta rostros en una imagen y predice genero y edad usando modelos entrenados en el laboratorio."
     )
-    #cargar modelos (aunque no se usen aun)
+    # cargar modelos (aunque no se usen aun)
     gender_model, age_model = cargar_modelos()
 
     if gender_model is None or age_model is None:
         st.warning(
-            "Los modelos no se cargaron correctamente"
+            "Los modelos no se cargaron correctamente. Asegúrese de ejecutar main.py primero."
         )
         st.stop()
 
-    #subida de imagen
-
+    # subida de imagen
     uploaded_file = st.file_uploader(
         "Sube una fotografia, idealmente con rostros visibles",
         type=["jpg", "jpeg", "png"],
@@ -48,12 +49,12 @@ def run_app() -> None:
     if uploaded_file is None:
         st.stop()
 
-    #procesar imagen con OpenCV
+    # procesar imagen con OpenCV
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    image = cv2.imdecode(file_bytes,1)
+    image = cv2.imdecode(file_bytes, 1)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # type: ignore
 
-    #deteccion de rostros con Haar Cascade
+    # deteccion de rostros con Haar Cascade
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml") # type: ignore
 
     faces = face_cascade.detectMultiScale(
@@ -63,20 +64,15 @@ def run_app() -> None:
         minSize=(30, 30)
     )
 
-    #iterar sobre los rostros detectados
+    # iterar sobre los rostros detectados
     for (x, y, w, h) in faces:
-        face_roi = gray_image[y:y+h, x:x+w]
+        # Extraemos el rostro original
+        face_roi = image[y:y+h, x:x+w]
         
-        face_roi_resized = cv2.resize(face_roi, (200, 200))
-        face_vector = face_roi_resized.flatten().reshape(1, -1)
+        # Enviar el rostro a nuestro pipeline modularizado
+        gender_label, pred_age = predict_face(face_roi, gender_model, age_model)
 
-        #inferir genero y edad
-        pred_gender = gender_model.predict(face_vector)[0]
-        pred_age = age_model.predict(face_vector)[0]
-
-        gender_label = "Hombre" if pred_gender == 0 else "Mujer"
-
-        label = f"{gender_label}, Edad: {int(pred_age)} anios"
+        label = f"{gender_label}, Edad: {pred_age} anios"
 
         cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2) #type: ignore
         cv2.putText(image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2) #type: ignore
@@ -84,3 +80,6 @@ def run_app() -> None:
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) #type: ignore
     st.image(image_rgb, caption=f"Se detectaron {len(faces)} rostros", use_container_width=True)
     st.success("Inferencia completada")
+
+if __name__ == "__main__":
+    run_app()
