@@ -6,6 +6,7 @@ from src.config import LabConfig
 from src.data import build_dataset, dataset_to_dataframe
 from src.gender_classification import train_gender_classifier, evaluate_gender_classifier, save_gender_classifier
 from src.regression import train_age_regressor, evaluate_age_regressor, save_age_regressor
+from src.visualization import plot_real_vs_predicted_age
 
 def main():
     print("--- FASE 1: PREPARACIÓN DE DATOS ---")
@@ -95,6 +96,11 @@ def main():
 
     for metric, value in age_metrics.items():
         print(f"- {metric}: {value:.4f}")
+
+    print("Generando gráfico de Edad Real vs Predicha...")
+    y_pred_age = best_age_model.predict(X_test)
+    plot_real_vs_predicted_age(y_age_test, y_pred_age)
+    print("      -> Gráfico guardado en artifacts/real_vs_pred_age.png")
 
     # 3. Guardar el artefacto para la app web
     os.makedirs("artifacts/models", exist_ok=True)

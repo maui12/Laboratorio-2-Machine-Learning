@@ -1,3 +1,4 @@
 /dataset/UTKFace
 /src/__pycache__
 /artifacts/models
+artifacts/real_vs_pred_age.png
